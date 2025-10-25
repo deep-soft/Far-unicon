@@ -1,0 +1,84 @@
+name: act-Build
+
+on:
+#  push:
+#    branches: [ master ]
+#  pull_request:
+#    branches: [ master ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+  PROG_NAME: far-unicon
+  PROG_VERSION: "v1.0.4"
+
+jobs:
+  build-msbuild:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [
+                 msbuild_cl_x64_release,
+                 msbuild_cl_x86_release,
+               ]
+
+        include:
+          - { build: msbuild_cl_x64_release, compiler: msbuild_cl, arch: x64, build_config: Release }
+          - { build: msbuild_cl_x86_release, compiler: msbuild_cl, arch: x86, build_config: Release }
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v2
+
+      - name: Set MSVC environment
+        uses: deep-soft/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Build (cl)
+        run: |
+          MSBuild.exe -m -property:Configuration=${{ matrix.build_config }} -property:Platform=${{ matrix.arch }} unicon.sln
+
+      - name: Publish
+        uses: actions/upload-artifact@v2
+        with:
+          name: unicon.${{ matrix.arch }}
+          path: |
+            bin/${{ matrix.build_config }}.${{ matrix.arch }}/unicon.dll
+            bin/${{ matrix.build_config }}.${{ matrix.arch }}/unicon.exe
+            README.md
+
+      - name: Prepare for Archive Release
+        shell: bash
+        run: |
+          mkdir _release_
+          cp bin/${{ matrix.build_config }}.${{ matrix.arch }}/unicon.dll _release_/unicon.dll
+          cp bin/${{ matrix.build_config }}.${{ matrix.arch }}/unicon.exe _release_/unicon.exe
+          cp README.md _release_/README.md
+
+      - name: Archive Release
+        continue-on-error: true
+        uses: deep-soft/zip-release@v2
+        with:
+          type: 'zip'
+          filename: '${{ env.PROG_NAME }}-${{ env.PROG_VERSION }}-${{ matrix.arch }}.zip'
+          directory: '${{github.workspace}}/_release_'
+          path: '.'
+          inclusions: 'unicon*.dll unicon*.exe README.md'
+          # exclusions: '*.git* /*node_modules/* .editorconfig'
+          exclusions: '*Bel.lng *Rus.lng *Cze.lng *Ger.lng *Hun.lng *Pol.lng *Spa.lng *Ukr.lng *bel.lng *rus.lng *calcb.lng *calcr.lng *colorerb.lng *colorerr.lng *editorcomp_be.lng *editorcomp_ru.lng *isrcrus.lng'
+          recursive_exclusions: '*Bel.lng *Rus.lng *Cze.lng *Ger.lng *Hun.lng *Pol.lng *Spa.lng *Ukr.lng *bel.lng *rus.lng *calcb.lng *calcr.lng *colorerb.lng *colorerr.lng *editorcomp_be.lng *editorcomp_ru.lng *isrcrus.lng'
+          debug: yes
+
+      - name: Publish Release
+        continue-on-error: true
+        uses: deep-soft/action-gh-release@v2.1
+        with:
+          draft: true
+          tag_name: ${{ env.PROG_NAME }}-${{ env.PROG_VERSION }}
+          files: |
+            ${{ env.ZIP_RELEASE_ARCHIVE }}
+            ${{github.workspace}}/bin/${{ matrix.build_config }}.${{ matrix.arch }}/unicon.dll
+            ${{github.workspace}}/bin/${{ matrix.build_config }}.${{ matrix.arch }}/unicon.exe
+            ${{github.workspace}}/README.md
