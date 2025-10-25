@@ -87,7 +87,7 @@ jobs:
           type: 'sha256'
           filename: '${{ env.PROG_NAME }}-${{ matrix.arch }}-${{ env.PROG_VERSION }}.zip.sha256'
           directory: '_release_'
-          path: ${{ env.ZIP_RELEASE_ARCHIVE }}
+          path: '${{ env.PROG_NAME }}-${{ matrix.arch }}-${{ env.PROG_VERSION }}.zip'
           ignore_git: true
           # output env.SHA_SUMS
 
