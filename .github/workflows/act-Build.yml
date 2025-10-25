@@ -57,12 +57,22 @@ jobs:
           cp bin/${{ matrix.build_config }}.${{ matrix.arch }}/unicon.exe _release_/unicon.exe
           cp README.md _release_/README.md
 
+      - name: SHA256 for file in Archive
+        uses: deep-soft/sha-checksums@v1
+        with:
+          type: 'sha256'
+          filename: '${{ env.PROG_NAME }}-${{ matrix.arch }}-${{ env.PROG_VERSION }}.sha256'
+          directory: '_release_'
+          path: '.'
+          ignore_git: true
+          # output env.SHA_SUMS
+
       - name: Archive Release
         continue-on-error: true
         uses: deep-soft/zip-release@v2
         with:
           type: 'zip'
-          filename: '${{ env.PROG_NAME }}-${{ env.PROG_VERSION }}-${{ matrix.arch }}.zip'
+          filename: '${{ env.PROG_NAME }}-${{ matrix.arch }}-${{ env.PROG_VERSION }}.zip'
           directory: '${{github.workspace}}/_release_'
           path: '.'
           # inclusions: 'unicon*.dll unicon*.exe README.md'
@@ -71,6 +81,16 @@ jobs:
           recursive_exclusions: '*Bel.lng *Rus.lng *Cze.lng *Ger.lng *Hun.lng *Pol.lng *Spa.lng *Ukr.lng *bel.lng *rus.lng *calcb.lng *calcr.lng *colorerb.lng *colorerr.lng *editorcomp_be.lng *editorcomp_ru.lng *isrcrus.lng'
           debug: yes
 
+      - name: SHA256 for Zip Archive
+        uses: deep-soft/sha-checksums@v1
+        with:
+          type: 'sha256'
+          filename: '${{ env.ZIP_RELEASE_ARCHIVE }}.sha256'
+          directory: '_release_'
+          path: ${{ env.ZIP_RELEASE_ARCHIVE }}
+          ignore_git: true
+          # output env.SHA_SUMS
+
       - name: Publish Release
         continue-on-error: true
         uses: deep-soft/action-gh-release@v2.1
@@ -78,7 +98,6 @@ jobs:
           draft: true
           tag_name: ${{ env.PROG_NAME }}-${{ env.PROG_VERSION }}
           files: |
+            README.md
             ${{ env.ZIP_RELEASE_ARCHIVE }}
-            ${{github.workspace}}/bin/${{ matrix.build_config }}.${{ matrix.arch }}/unicon.dll
-            ${{github.workspace}}/bin/${{ matrix.build_config }}.${{ matrix.arch }}/unicon.exe
-            ${{github.workspace}}/README.md
+            ${{ env.SHA_SUMS }}
